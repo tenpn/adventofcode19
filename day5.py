@@ -14,6 +14,11 @@ def tests():
     intcode.test_inout([5,8,7,99,104,10,99,4,0], [], [], "jump if true fails")
     intcode.test_inout([105,0,7,99,104,10,99,4], [], [], "jump if true immediate param1")
     intcode.test_inout([1105,1,4,99,104,10,99], [], [10], "jump if true immediate dest")
+    # first instruction will test to see if we're jumping to the end or not, maybe with some data suffix.
+    intcode.test_inout([6,8,7,99,104,10,99,4,1], [], [], "jump if false fails")
+    intcode.test_inout([6,8,7,99,104,10,99,4,0], [], [10], "jump if false passes")
+    intcode.test_inout([106,0,7,99,104,10,99,4], [], [10], "jump if false immediate param1")
+    intcode.test_inout([1106,1,4,99,104,10,99], [], [], "jump if false immediate dest")
 
 tests()
 mode = 1

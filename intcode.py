@@ -51,13 +51,13 @@ def execute(memory, input=[]):
             output.append(param)
             pc = pc + 2
 
-        elif op_code == 5: # jump if true
-            param = get_param_value(1, "jumpiftrue", instruction, memory, pc)
-                
-            if param == 0:
+        elif op_code == 5 or op_code == 6: # jump if true/false
+            param = get_param_value(1, "jumpif", instruction, memory, pc)
+            
+            if (param == 0 and op_code == 5) or (param != 0 and op_code == 6):
                 pc = pc + 3
             else:
-                pc = get_param_value(2, "jumpiftrue", instruction, memory, pc)
+                pc = get_param_value(2, "jumpif", instruction, memory, pc)
             
         else:
             assert False, "unexpected opcode %d at mem[%d]"%(op_code, pc)
