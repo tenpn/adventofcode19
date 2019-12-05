@@ -24,6 +24,7 @@ def execute(memory, input=[]):
         # string stuff! but it's fine!
         instruction = str(memory[pc])
         op_code = int(instruction[-2:])
+        #print(instruction)
         
         if op_code <= 2: # *+
             sym = "+" if op_code == 1 else "*"
@@ -59,16 +60,24 @@ def execute(memory, input=[]):
             else:
                 pc = get_param_value(2, "jumpif", instruction, memory, pc)
 
-        elif op_code == 7 or op_code == 8: # less/greater
-            param1 = get_param_value(1, "rel", instruction, memory, pc)
-            param2 = get_param_value(2, "rel", instruction, memory, pc)
+        elif op_code == 7: # less than
+            param1 = get_param_value(1, "lt", instruction, memory, pc)
+            param2 = get_param_value(2, "lt", instruction, memory, pc)
             dest = memory[pc+3]
-            is_pass = (param1 < param2 and op_code == 7) or (param1 > param2 and op_code == 8)
-            memory[dest] = 1 if is_pass else 0
+            memory[dest] = 1 if param1 < param2 else 0
+            pc = pc + 4
+            
+        elif op_code == 8: # equal
+            param1 = get_param_value(1, "eq", instruction, memory, pc)
+            param2 = get_param_value(2, "eq", instruction, memory, pc)
+            dest = memory[pc+3]
+            memory[dest] = 1 if param1 == param2 else 0
             pc = pc + 4
             
         else:
             assert False, "unexpected opcode %d at mem[%d]"%(op_code, pc)
+
+        #print(memory)
     return output
 
 def test_mem(memory, expected_memory, msg):

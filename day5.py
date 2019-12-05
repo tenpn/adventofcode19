@@ -24,10 +24,12 @@ def tests():
     intcode.test_mem([7,0,2,0,99], [0,0,2,0,99], "less than fails")
     intcode.test_mem([107,100,0,0,99], [1,100,0,0,99], "less than immediate param1")
     intcode.test_mem([1007,0,2000,0,99], [1,0,2000,0,99], "less than immediate param2")
-    intcode.test_mem([8,3,2,0,99], [0,3,2,0,99], "greater than passes")
-    intcode.test_mem([8,0,2,0,99], [1,0,2,0,99], "greater than fails")
-    intcode.test_mem([108,100,0,0,99], [0,100,0,0,99], "greater than immediate param1")
-    intcode.test_mem([1008,0,2000,0,99], [0,0,2000,0,99], "greater than immediate param2")
+    intcode.test_mem([8,5,6,0,99,1,1], [1,5,6,0,99,1,1], "equals passes")
+    intcode.test_mem([8,5,6,0,99,1,2], [0,5,6,0,99,1,2], "equals fails")
+    intcode.test_mem([108,2,5,0,99,2], [1,2,5,0,99,2], "equals immediate param1")
+    intcode.test_mem([1008,5,2,0,99,2],[1,5,2,0,99,2], "equals immediate param2")
+    # day5 part 2 test
+    intcode.test_inout([3,9,8,9,10,9,4,9,99,-1,8], [8], [1], "1 if equal to 8")
 
 tests()
 mode = 1
