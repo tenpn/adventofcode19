@@ -6,7 +6,16 @@ def assert_immediate_in_range(memory, pc, msg):
 # parameter index is 1-based
 def get_instr_mode(instruction, param_index):
     return int(instruction[-2-param_index]) if len(instruction) > (1+param_index) else 0
-    
+
+# param index is 1-based
+def get_param_value(param_index, name, instruction, memory, pc):
+    param_mode = get_instr_mode(instruction, param_index)
+    if param_mode == 0:
+        assert_position_in_range(memory, pc+param_index, name+str(param_index))
+        return memory[memory[pc+param_index]]
+    else:
+        return memory[pc+param_index]
+
 def execute(memory, input=[]):
     pc = 0
     output = []
@@ -21,19 +30,8 @@ def execute(memory, input=[]):
             #print(">", memory[pc], memory[pc+1], memory[pc+2], memory[pc+3])
             #print("[" + str(pc+3) + "] = [" + str(memory[pc+1]) + "]" + sym + "[" + str(memory[pc+2]) + "]" )
 
-            param1_mode = get_instr_mode(instruction, 1)
-            if param1_mode == 0:
-                assert_position_in_range(memory, pc+1, sym + "param1")
-                param1 = memory[memory[pc+1]]
-            else:
-                param1 = memory[pc+1]
-
-            param2_mode = get_instr_mode(instruction, 2)
-            if param2_mode == 0:
-                assert_position_in_range(memory, pc+2, sym + "param2")
-                param2 = memory[memory[pc+2]]
-            else:
-                param2 = memory[pc+2]
+            param1 = get_param_value(1, sym, instruction, memory, pc)
+            param2 = get_param_value(2, sym, instruction, memory, pc)
 
             dest = memory[pc+3]
             res = (param1+param2) if op_code == 1 else (param1*param2)
@@ -49,32 +47,17 @@ def execute(memory, input=[]):
             pc = pc + 2
 
         elif op_code == 4: # output
-            param1_mode = get_instr_mode(instruction, 1)
-            if param1_mode == 0:
-                assert_position_in_range(memory, pc+1, "ouput param1")
-                param1 = memory[memory[pc+1]]
-            else:
-                param1 = memory[pc+1]
-            output.append(param1)
+            param = get_param_value(1, "output", instruction, memory, pc)
+            output.append(param)
             pc = pc + 2
 
         elif op_code == 5: # jump if true
-            param1_mode = get_instr_mode(instruction, 1)
-            if param1_mode == 0:
-                assert_position_in_range(memory, pc+1, "jumpiftrue param1")
-                param1 = memory[memory[pc+1]]
-            else:
-                param1 = memory[pc+1]
+            param = get_param_value(1, "jumpiftrue", instruction, memory, pc)
                 
-            if param1 == 0:
+            if param == 0:
                 pc = pc + 3
             else:
-                dest_mode = get_instr_mode(instruction, 2)
-                if dest_mode == 0:
-                    assert_position_in_range(memory, pc+1, "jumpiftrue new PC")
-                    pc = memory[memory[pc+2]]
-                else:
-                    pc = memory[pc+2]
+                pc = get_param_value(2, "jumpiftrue", instruction, memory, pc)
             
         else:
             assert False, "unexpected opcode %d at mem[%d]"%(op_code, pc)

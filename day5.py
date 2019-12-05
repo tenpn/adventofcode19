@@ -9,6 +9,7 @@ def tests():
     intcode.test_inmem([3,1,99], [5], [3,5,99], "input")
     intcode.test_inout([4,0,99], [], [4], "output")
     intcode.test_inout([104,50,99], [], [50], "immediate output")
+    # first instruction will test to see if we're jumping to the end or not, maybe with some data suffix.
     intcode.test_inout([5,8,7,99,104,10,99,4,1], [], [10], "jump if true passes")
     intcode.test_inout([5,8,7,99,104,10,99,4,0], [], [], "jump if true fails")
     intcode.test_inout([105,0,7,99,104,10,99,4], [], [], "jump if true immediate param1")
