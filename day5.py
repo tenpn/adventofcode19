@@ -19,6 +19,15 @@ def tests():
     intcode.test_inout([6,8,7,99,104,10,99,4,0], [], [10], "jump if false passes")
     intcode.test_inout([106,0,7,99,104,10,99,4], [], [10], "jump if false immediate param1")
     intcode.test_inout([1106,1,4,99,104,10,99], [], [], "jump if false immediate dest")
+    # relationals
+    intcode.test_mem([7,3,2,0,99], [1,3,2,0,99], "less than passes")
+    intcode.test_mem([7,0,2,0,99], [0,0,2,0,99], "less than fails")
+    intcode.test_mem([107,100,0,0,99], [1,100,0,0,99], "less than immediate param1")
+    intcode.test_mem([1007,0,2000,0,99], [1,0,2000,0,99], "less than immediate param2")
+    intcode.test_mem([8,3,2,0,99], [0,3,2,0,99], "greater than passes")
+    intcode.test_mem([8,0,2,0,99], [1,0,2,0,99], "greater than fails")
+    intcode.test_mem([108,100,0,0,99], [0,100,0,0,99], "greater than immediate param1")
+    intcode.test_mem([1008,0,2000,0,99], [0,0,2000,0,99], "greater than immediate param2")
 
 tests()
 mode = 1

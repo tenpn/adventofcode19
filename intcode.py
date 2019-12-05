@@ -58,6 +58,14 @@ def execute(memory, input=[]):
                 pc = pc + 3
             else:
                 pc = get_param_value(2, "jumpif", instruction, memory, pc)
+
+        elif op_code == 7 or op_code == 8: # less/greater
+            param1 = get_param_value(1, "rel", instruction, memory, pc)
+            param2 = get_param_value(2, "rel", instruction, memory, pc)
+            dest = memory[pc+3]
+            is_pass = (param1 < param2 and op_code == 7) or (param1 > param2 and op_code == 8)
+            memory[dest] = 1 if is_pass else 0
+            pc = pc + 4
             
         else:
             assert False, "unexpected opcode %d at mem[%d]"%(op_code, pc)
@@ -65,7 +73,7 @@ def execute(memory, input=[]):
 
 def test_mem(memory, expected_memory, msg):
     execute(memory)
-    assert memory == expected_memory, msg
+    assert memory == expected_memory, "%s expected mem %s but got %s" %(msg, str(expected_memory), str(memory))
     
 def test_inmem(memory, input, expected_memory, msg):
     execute(memory, input)
