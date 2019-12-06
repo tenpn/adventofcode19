@@ -28,18 +28,21 @@ def path_to(start, dest, orbit_data):
     
     dupes = [orbiter for orbiter in dest_to_COM if orbiter in start_to_COM]
 
-    route = list(start_to_COM)
-    route_back = list(dest_to_COM)
-    for dupe in dupes:
-        route.remove(dupe)
-        route_back.remove(dupe)
+    route = []
+    first_dupe = None
+    for start_COM_step in start_to_COM:
+        route.append(start_COM_step)
+        if start_COM_step == dest:
+            return route
+        if start_COM_step in dest_to_COM:
+            first_dupe = start_COM_step
+            break;
 
-    is_reversing = dest not in route
-    if is_reversing:
-        route.append(dupes[0])
-        route += reversed(route_back)
-        route.append(dest)
-        
+    # now walk back from the first dupe to the dest
+    back_to_dest = reversed(dest_to_COM[:dest_to_COM.index(first_dupe)])
+    route += back_to_dest
+    route.append(dest)
+
     return route
 
 def count_all_orbits(orbit_data):
