@@ -91,3 +91,57 @@ def test_inmem(memory, input, expected_memory, msg):
 def test_inout(memory, input, expected_output, msg):
     actual_output = execute(memory, input)
     assert actual_output == expected_output, "%s expected %s got %s"%(msg, str(expected_output), str(actual_output))
+
+def tests():
+    test_mem([1,1,0,3,99], [1,1,0,2,99], "defaults to positional")
+    test_mem([101,10,0,3,99], [101,10,0,111,99], "first param immediate")
+    test_mem([1001,0,10,3,99], [1001,0,10,1011,99], "second param immediate")
+    test_inmem([3,1,99], [5], [3,5,99], "input")
+    test_inout([4,0,99], [], [4], "output")
+    test_inout([104,50,99], [], [50], "immediate output")
+    # first instruction will test to see if we're jumping to the end or not, maybe with some data suffix.
+    test_inout([5,8,7,99,104,10,99,4,1], [], [10], "jump if true passes")
+    test_inout([5,8,7,99,104,10,99,4,0], [], [], "jump if true fails")
+    test_inout([105,0,7,99,104,10,99,4], [], [], "jump if true immediate param1")
+    test_inout([1105,1,4,99,104,10,99], [], [10], "jump if true immediate dest")
+    # first instruction will test to see if we're jumping to the end or not, maybe with some data suffix.
+    test_inout([6,8,7,99,104,10,99,4,1], [], [], "jump if false fails")
+    test_inout([6,8,7,99,104,10,99,4,0], [], [10], "jump if false passes")
+    test_inout([106,0,7,99,104,10,99,4], [], [10], "jump if false immediate param1")
+    test_inout([1106,1,4,99,104,10,99], [], [], "jump if false immediate dest")
+    # relationals
+    test_mem([7,3,2,0,99], [1,3,2,0,99], "less than passes")
+    test_mem([7,0,2,0,99], [0,0,2,0,99], "less than fails")
+    test_mem([107,100,0,0,99], [1,100,0,0,99], "less than immediate param1")
+    test_mem([1007,0,2000,0,99], [1,0,2000,0,99], "less than immediate param2")
+    test_mem([8,5,6,0,99,1,1], [1,5,6,0,99,1,1], "equals passes")
+    test_mem([8,5,6,0,99,1,2], [0,5,6,0,99,1,2], "equals fails")
+    test_mem([108,2,5,0,99,2], [1,2,5,0,99,2], "equals immediate param1")
+    test_mem([1008,5,2,0,99,2],[1,5,2,0,99,2], "equals immediate param2")
+    # day5 part 2 test
+    test_inout([3,9,8,9,10,9,4,9,99,-1,8], [8], [1], "1 if equal to 8")
+    test_inout([3,9,8,9,10,9,4,9,99,-1,8], [9], [0], "0 if not equal to 8")
+    test_inout([3,3,1108,-1,8,3,4,3,99], [8], [1], "1 if equal to 8")
+    test_inout([3,3,1108,-1,8,3,4,3,99], [9], [0], "0 if not equal to 8")
+    test_inout([3,9,7,9,10,9,4,9,99,-1,8], [7], [1], "1 if lt 8")
+    test_inout([3,9,7,9,10,9,4,9,99,-1,8], [8], [0], "0 if not lt 8")
+    test_inout([3,3,1107,-1,8,3,4,3,99], [7], [1], "1 if lt 8")
+    test_inout([3,3,1107,-1,8,3,4,3,99], [8], [0], "0 if not lt 8")
+    test_inout([3,12,6,12,15,1,13,14,13,4,13,99,-1,0,1,9], [0], [0], "0 if 0")
+    test_inout([3,12,6,12,15,1,13,14,13,4,13,99,-1,0,1,9], [10], [1], "1 if not 0")
+    test_inout([3,3,1105,-1,9,1101,0,0,12,4,12,99,1], [0], [0], "0 if 0")
+    test_inout([3,3,1105,-1,9,1101,0,0,12,4,12,99,1], [10], [1], "1 if not 0")
+    test_inout([3,21,1008,21,8,20,1005,20,22,107,8,21,20,1006,20,
+                        31,1106,0,36,98,0,0,1002,21,125,20,4,20,1105,1,46,104,
+                        999,1105,1,46,1101,1000,1,20,4,20,1105,1,46,98,99],
+                       [5],[999], "999 if below 8")
+    test_inout([3,21,1008,21,8,20,1005,20,22,107,8,21,20,1006,20,
+                        31,1106,0,36,98,0,0,1002,21,125,20,4,20,1105,1,46,104,
+                        999,1105,1,46,1101,1000,1,20,4,20,1105,1,46,98,99],
+                       [8],[1000], "1000 if eq 8")
+    test_inout([3,21,1008,21,8,20,1005,20,22,107,8,21,20,1006,20,
+                        31,1106,0,36,98,0,0,1002,21,125,20,4,20,1105,1,46,104,
+                        999,1105,1,46,1101,1000,1,20,4,20,1105,1,46,98,99],
+                       [15],[1001], "1001 if gt 8")
+    print("tests pass")
+    
