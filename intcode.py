@@ -16,6 +16,12 @@ def get_param_value(param_index, name, instruction, memory, pc):
     else:
         return memory[pc+param_index]
 
+def ensure_memory(memory, new_location):
+    assert new_location >= 0, "Expected non-negative memory location but got %d"%(new_location)
+    if len(memory) <= new_location:
+        extra_pad = [0 for _ in range((new_location-len(memory))+1)]
+        memory += extra_pad
+    
 def execute(memory, input=[]):
     pc = 0
     output = []
@@ -37,6 +43,7 @@ def execute(memory, input=[]):
             dest = memory[pc+3]
             res = (param1+param2) if op_code == 1 else (param1*param2)
             #print(param1, sym, param2, "=", res)
+            ensure_memory(memory, dest)
             memory[dest] = res
             pc = pc + 4
             
@@ -44,6 +51,7 @@ def execute(memory, input=[]):
             new_input = input[input_pc]
             input_pc = input_pc + 1
             dest = memory[pc+1]
+            ensure_memory(memory, dest)
             memory[dest] = new_input
             pc = pc + 2
 
@@ -64,6 +72,7 @@ def execute(memory, input=[]):
             param1 = get_param_value(1, "lt", instruction, memory, pc)
             param2 = get_param_value(2, "lt", instruction, memory, pc)
             dest = memory[pc+3]
+            ensure_memory(memory, dest)
             memory[dest] = 1 if param1 < param2 else 0
             pc = pc + 4
             
@@ -71,6 +80,7 @@ def execute(memory, input=[]):
             param1 = get_param_value(1, "eq", instruction, memory, pc)
             param2 = get_param_value(2, "eq", instruction, memory, pc)
             dest = memory[pc+3]
+            ensure_memory(memory, dest)
             memory[dest] = 1 if param1 == param2 else 0
             pc = pc + 4
             
@@ -143,5 +153,10 @@ def tests():
                         31,1106,0,36,98,0,0,1002,21,125,20,4,20,1105,1,46,104,
                         999,1105,1,46,1101,1000,1,20,4,20,1105,1,46,98,99],
                        [15],[1001], "1001 if gt 8")
+    # writing beyond the memory list will grow it
+    test_inout([1101,1,1,7,4,7,99], [], [2], "extra memory math")
+    test_inout([1108,1,1,7,4,7,99], [], [1], "extra memory eq")
+    test_inout([1107,0,1,7,4,7,99], [], [1], "extra memory lt")
+    test_inout([3,3,99], [1], [], "extra memory lt")
     print("tests pass")
     
