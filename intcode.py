@@ -1,7 +1,3 @@
-def assert_position_in_range(memory, pc, msg):
-    assert memory[pc] >= 0 and memory[pc] < len(memory), "%s %d at mem[%d] is out of range"%(msg, memory[pc], pc)
-def assert_immediate_in_range(memory, pc, msg):
-    assert pc >= 0 and pc < len(memory), "%s %d is out of range"%(msg, pc)
 
 # parameter index is 1-based
 def get_instr_mode(instruction, param_index):
@@ -11,16 +7,18 @@ def get_instr_mode(instruction, param_index):
 def get_param_value(param_index, name, instruction, memory, pc, relative_base):
     param_mode = get_instr_mode(instruction, param_index)
     if param_mode == 0:
-        assert_position_in_range(memory, pc+param_index, name+str(param_index))
-        return memory[memory[pc+param_index]]
+        param_location = memory[pc+param_index]
+        return read_memory(memory, param_location)
     elif param_mode == 1:
         return memory[pc+param_index]
     else:
         assert param_mode == 2, "unknown param mode " + str(param_mode)
-        assert_position_in_range(memory, pc+param_index, name+str(param_index))
         relative_position = relative_base + memory[pc+param_index]
-        assert_position_in_range(memory, relative_position, name+str(param_index))
-        return memory[relative_position]
+        return read_memory(memory, relative_position)
+
+def read_memory(memory, loc):
+    assert loc >= 0, "expected non-negative memory location but got %d"%(loc)
+    return 0 if len(memory) <= loc else memory[loc]
 
 def ensure_memory(memory, new_location):
     assert new_location >= 0, "Expected non-negative memory location but got %d"%(new_location)
@@ -170,6 +168,9 @@ def tests():
     test_inout([1108,1,1,7,4,7,99], [], [1], "extra memory eq")
     test_inout([1107,0,1,7,4,7,99], [], [1], "extra memory lt")
     test_inout([3,3,99], [1], [], "extra memory lt")
+    # reading beyond the memory returns 0
+    test_inout([4,100,99],[],[0], "reading outside of memory")
+    test_inout([204,100,99],[],[0], "reading outside of memory")
     # relative mode
     test_mem([201,5,6,7,99,1,1], [201,5,6,7,99,1,1,2], "relative mode starts off as position mode")
     test_inout([109,1,99], [], [], "op 9 does nothing by itself")
