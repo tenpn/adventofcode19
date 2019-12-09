@@ -8,13 +8,19 @@ def get_instr_mode(instruction, param_index):
     return int(instruction[-2-param_index]) if len(instruction) > (1+param_index) else 0
 
 # param index is 1-based
-def get_param_value(param_index, name, instruction, memory, pc):
+def get_param_value(param_index, name, instruction, memory, pc, relative_base):
     param_mode = get_instr_mode(instruction, param_index)
     if param_mode == 0:
         assert_position_in_range(memory, pc+param_index, name+str(param_index))
         return memory[memory[pc+param_index]]
-    else:
+    elif param_mode == 1:
         return memory[pc+param_index]
+    else:
+        assert param_mode == 2, "unknown param mode " + str(param_mode)
+        assert_position_in_range(memory, pc+param_index, name+str(param_index))
+        relative_position = relative_base + memory[pc+param_index]
+        assert_position_in_range(memory, relative_position, name+str(param_index))
+        return memory[relative_position]
 
 def ensure_memory(memory, new_location):
     assert new_location >= 0, "Expected non-negative memory location but got %d"%(new_location)
@@ -26,6 +32,7 @@ def execute(memory, input=[]):
     pc = 0
     output = []
     input_pc = 0
+    relative_base = 0
     while memory[pc] != 99:
         # string stuff! but it's fine!
         instruction = str(memory[pc])
@@ -37,8 +44,8 @@ def execute(memory, input=[]):
             #print(">", memory[pc], memory[pc+1], memory[pc+2], memory[pc+3])
             #print("[" + str(pc+3) + "] = [" + str(memory[pc+1]) + "]" + sym + "[" + str(memory[pc+2]) + "]" )
 
-            param1 = get_param_value(1, sym, instruction, memory, pc)
-            param2 = get_param_value(2, sym, instruction, memory, pc)
+            param1 = get_param_value(1, sym, instruction, memory, pc, relative_base)
+            param2 = get_param_value(2, sym, instruction, memory, pc, relative_base)
 
             dest = memory[pc+3]
             res = (param1+param2) if op_code == 1 else (param1*param2)
@@ -56,33 +63,38 @@ def execute(memory, input=[]):
             pc = pc + 2
 
         elif op_code == 4: # output
-            param = get_param_value(1, "output", instruction, memory, pc)
+            param = get_param_value(1, "output", instruction, memory, pc, relative_base)
             output.append(param)
             pc = pc + 2
 
         elif op_code == 5 or op_code == 6: # jump if true/false
-            param = get_param_value(1, "jumpif", instruction, memory, pc)
+            param = get_param_value(1, "jumpif", instruction, memory, pc, relative_base)
             
             if (param == 0 and op_code == 5) or (param != 0 and op_code == 6):
                 pc = pc + 3
             else:
-                pc = get_param_value(2, "jumpif", instruction, memory, pc)
+                pc = get_param_value(2, "jumpif", instruction, memory, pc, relative_base)
 
         elif op_code == 7: # less than
-            param1 = get_param_value(1, "lt", instruction, memory, pc)
-            param2 = get_param_value(2, "lt", instruction, memory, pc)
+            param1 = get_param_value(1, "lt", instruction, memory, pc, relative_base)
+            param2 = get_param_value(2, "lt", instruction, memory, pc, relative_base)
             dest = memory[pc+3]
             ensure_memory(memory, dest)
             memory[dest] = 1 if param1 < param2 else 0
             pc = pc + 4
             
         elif op_code == 8: # equal
-            param1 = get_param_value(1, "eq", instruction, memory, pc)
-            param2 = get_param_value(2, "eq", instruction, memory, pc)
+            param1 = get_param_value(1, "eq", instruction, memory, pc, relative_base)
+            param2 = get_param_value(2, "eq", instruction, memory, pc, relative_base)
             dest = memory[pc+3]
             ensure_memory(memory, dest)
             memory[dest] = 1 if param1 == param2 else 0
             pc = pc + 4
+
+        elif op_code == 9: # move relative base
+            param1 = get_param_value(1, "relbase", instruction, memory, pc, relative_base)
+            relative_base += param1
+            pc = pc + 2
             
         else:
             assert False, "unexpected opcode %d at mem[%d]"%(op_code, pc)
@@ -158,5 +170,10 @@ def tests():
     test_inout([1108,1,1,7,4,7,99], [], [1], "extra memory eq")
     test_inout([1107,0,1,7,4,7,99], [], [1], "extra memory lt")
     test_inout([3,3,99], [1], [], "extra memory lt")
+    # relative mode
+    test_mem([201,5,6,7,99,1,1], [201,5,6,7,99,1,1,2], "relative mode starts off as position mode")
+    test_inout([109,1,99], [], [], "op 9 does nothing by itself")
+    test_mem([109,1,208,7,8,9,99,2,1], [109,1,208,7,8,9,99,2,1,1], "op 9 moves relative base")
+    test_mem([9,8,208,7,8,9,99,2,1], [9,8,208,7,8,9,99,2,1,1], "op 9 moves relative base")
     print("tests pass")
     
