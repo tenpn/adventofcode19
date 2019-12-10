@@ -145,7 +145,7 @@ def test_mem(memory, expected_memory, msg, logging=log_none):
     
 def test_inmem(memory, input, expected_memory, msg, logging=log_none):
     execute(memory, input, logging)
-    assert memory == expected_memory, msg
+    assert memory == expected_memory, "%s expected mem %s but got %s"%(msg, str(expected_memory), str(memory))
 
 def test_inout(memory, input, expected_output, msg, logging=log_none):
     actual_output = execute(memory, input, logging)
