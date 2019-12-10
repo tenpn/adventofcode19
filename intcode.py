@@ -5,16 +5,21 @@ def get_instr_mode(instruction, param_index):
 
 # param index is 1-based
 def get_param_value(param_index, name, instruction, memory, pc, relative_base):
+    param_location = get_param_location(param_index, name, instruction, memory, pc, relative_base)
+    return read_memory(memory, param_location)
+    
+# param index is 1-based
+def get_param_location(param_index, name, instruction, memory, pc, relative_base):
     param_mode = get_instr_mode(instruction, param_index)
     if param_mode == 0:
         param_location = memory[pc+param_index]
-        return read_memory(memory, param_location)
+        return param_location
     elif param_mode == 1:
-        return memory[pc+param_index]
+        return pc+param_index
     else:
         assert param_mode == 2, "unknown param mode " + str(param_mode)
         relative_position = relative_base + memory[pc+param_index]
-        return read_memory(memory, relative_position)
+        return relative_position
 
 def read_memory(memory, loc):
     assert loc >= 0, "expected non-negative memory location but got %d"%(loc)
@@ -53,7 +58,9 @@ def execute(memory, input=[], log_level=log_none):
     input_pc = 0
     relative_base = 0
     global_log_level = log_level
-    #import pdb; pdb.set_trace()
+    if global_log_level == log_verbose:
+        #import pdb; pdb.set_trace()
+        pass
     
     while memory[pc] != 99:
         # string stuff! but it's fine!
@@ -71,7 +78,7 @@ def execute(memory, input=[], log_level=log_none):
             param1 = get_param_value(1, sym, instruction, memory, pc, relative_base)
             param2 = get_param_value(2, sym, instruction, memory, pc, relative_base)
 
-            dest = memory[pc+3]
+            dest = get_param_location(3, sym, instruction, memory, pc, relative_base)
             res = (param1+param2) if op_code == 1 else (param1*param2)
             ll("memory[%d] = %d %s %d = %d"%(dest, param1, sym, param2, res))
             ensure_memory(memory, dest)
@@ -82,7 +89,7 @@ def execute(memory, input=[], log_level=log_none):
             lv_params(1, memory, pc)
             new_input = input[input_pc]
             input_pc = input_pc + 1
-            dest = memory[pc+1]
+            dest = get_param_location(1, "input", instruction, memory, pc, relative_base)
             ensure_memory(memory, dest)
             ll("memory[%d] = input %d"%(dest, new_input))
             memory[dest] = new_input
@@ -110,7 +117,7 @@ def execute(memory, input=[], log_level=log_none):
             lv_params(3, memory, pc)
             param1 = get_param_value(1, "lt", instruction, memory, pc, relative_base)
             param2 = get_param_value(2, "lt", instruction, memory, pc, relative_base)
-            dest = memory[pc+3]
+            dest = get_param_location(3, "lt", instruction, memory, pc, relative_base)
             ensure_memory(memory, dest)
             memory[dest] = 1 if param1 < param2 else 0
             ll("memory[%d] = %d < %d = %d"%(dest, param1, param2, memory[dest]))
@@ -120,7 +127,7 @@ def execute(memory, input=[], log_level=log_none):
             lv_params(3, memory, pc)
             param1 = get_param_value(1, "eq", instruction, memory, pc, relative_base)
             param2 = get_param_value(2, "eq", instruction, memory, pc, relative_base)
-            dest = memory[pc+3]
+            dest = get_param_location(3, "eq", instruction, memory, pc, relative_base)
             ensure_memory(memory, dest)
             memory[dest] = 1 if param1 == param2 else 0
             ll("memory[%d] = %d == %d = %d"%(dest, param1, param2, memory[dest]))
@@ -158,6 +165,7 @@ def tests():
     test_inmem([3,1,99], [5], [3,5,99], "input")
     test_inout([4,0,99], [], [4], "output")
     test_inout([104,50,99], [], [50], "immediate output")
+    test_mem([109,10,21101,4,5,0,99],[109,10,21101,4,5,0,99,0,0,0,9], "math relative dest")
     # first instruction will test to see if we're jumping to the end or not, maybe with some data suffix.
     test_inout([5,8,7,99,104,10,99,4,1], [], [10], "jump if true passes")
     test_inout([5,8,7,99,104,10,99,4,0], [], [], "jump if true fails")
@@ -173,10 +181,12 @@ def tests():
     test_mem([7,0,2,0,99], [0,0,2,0,99], "less than fails")
     test_mem([107,100,0,0,99], [1,100,0,0,99], "less than immediate param1")
     test_mem([1007,0,2000,0,99], [1,0,2000,0,99], "less than immediate param2")
+    test_mem([109,10,21107,4,5,0,99],[109,10,21107,4,5,0,99,0,0,0,1], "lt relative dest")
     test_mem([8,5,6,0,99,1,1], [1,5,6,0,99,1,1], "equals passes")
     test_mem([8,5,6,0,99,1,2], [0,5,6,0,99,1,2], "equals fails")
     test_mem([108,2,5,0,99,2], [1,2,5,0,99,2], "equals immediate param1")
     test_mem([1008,5,2,0,99,2],[1,5,2,0,99,2], "equals immediate param2")
+    test_mem([109,10,21108,5,5,0,99],[109,10,21108,5,5,0,99,0,0,0,1], "equals relative dest")
     # day5 part 2 test
     test_inout([3,9,8,9,10,9,4,9,99,-1,8], [8], [1], "1 if equal to 8")
     test_inout([3,9,8,9,10,9,4,9,99,-1,8], [9], [0], "0 if not equal to 8")
@@ -215,5 +225,6 @@ def tests():
     test_inout([109,1,99], [], [], "op 9 does nothing by itself")
     test_mem([109,1,208,7,8,9,99,2,1], [109,1,208,7,8,9,99,2,1,1], "op 9 moves relative base")
     test_mem([9,8,208,7,8,9,99,2,1], [9,8,208,7,8,9,99,2,1,1], "op 9 moves relative base")
+    test_inmem([109,10,203,0,99],[444],[109,10,203,0,99,0,0,0,0,0,444], "relative write dest in input")
     print("tests pass")
     
