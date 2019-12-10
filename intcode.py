@@ -226,5 +226,10 @@ def tests():
     test_mem([109,1,208,7,8,9,99,2,1], [109,1,208,7,8,9,99,2,1,1], "op 9 moves relative base")
     test_mem([9,8,208,7,8,9,99,2,1], [9,8,208,7,8,9,99,2,1,1], "op 9 moves relative base")
     test_inmem([109,10,203,0,99],[444],[109,10,203,0,99,0,0,0,0,0,444], "relative write dest in input")
+    # day9 tests
+    test_inout([109,1,204,-1,1001,100,1,100,1008,100,16,101,1006,101,0,99], [], [109,1,204,-1,1001,100,1,100,1008,100,16,101,1006,101,0,99], "copy to output")
+    output = execute([1102,34915192,34915192,7,4,7,99,0], [])
+    assert len(str(output[0])) == 16, "expected 16-digit number but got " + str(output)
+    test_inout([104,1125899906842624,99], [], [1125899906842624], "output large number")
     print("tests pass")
     
