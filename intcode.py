@@ -66,14 +66,11 @@ def execute(memory, input=[], log_level=log_none):
         # string stuff! but it's fine!
         instruction = str(memory[pc])
         op_code = int(instruction[-2:])
-        #print(instruction)
         global_prefix = str(pc) + " " + instruction + ":"
         
         if op_code <= 2: # *+
             lv_params(3, memory, pc)
             sym = "+" if op_code == 1 else "*"
-            #print(")", memory[pc], memory[pc+1], memory[pc+2], memory[pc+3])
-            #print("[" + str(pc+3) + "] = [" + str(memory[pc+1]) + "]" + sym + "[" + str(memory[pc+2]) + "]" )
 
             param1 = get_param_value(1, sym, instruction, memory, pc, relative_base)
             param2 = get_param_value(2, sym, instruction, memory, pc, relative_base)
