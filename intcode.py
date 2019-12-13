@@ -28,9 +28,10 @@ class IntComputer:
         self.memory = memory
         self.log_level = log_level
         self.prefix = ""
-        self.output = []
         self.pc = 0
         self.relative_base = 0
+        self.input = []
+        self.input_pc = 0
 
     def lv(self, msg):
         if self.log_level == log_verbose:
@@ -72,10 +73,22 @@ class IntComputer:
             extra_pad = [0 for _ in range((new_location-len(self.memory))+1)]
             self.memory += extra_pad
 
-    def execute(self, input=[]):
-        input_pc = 0
+    def is_completed(self):
+        return self.memory[self.pc] == 99
 
-        while self.memory[self.pc] != 99:
+    def execute(self, input=[]):
+        all_out = []
+        while self.is_completed() == False:
+            all_out += self.step(input)
+            # strip out consumed input
+            input = input[self.input_pc:]
+        return all_out
+
+    def step(self, input=[]):
+        self.input_pc = 0
+        output = []
+
+        while self.is_completed() == False:
             # string stuff! but it's fine!
             instruction = str(self.memory[self.pc])
             op_code = int(instruction[-2:])
@@ -97,8 +110,8 @@ class IntComputer:
 
             elif op_code == 3: # input
                 self.lv_params(1, self.memory, self.pc)
-                new_input = input[input_pc]
-                input_pc = input_pc + 1
+                new_input = input[self.input_pc]
+                self.input_pc = self.input_pc + 1
                 dest = self.get_param_location(1, "input", instruction)
                 self.ensure_memory(dest)
                 self.ll("memory[%d] = input %d"%(dest, new_input))
@@ -109,8 +122,9 @@ class IntComputer:
                 self.lv_params(1, self.memory, self.pc)
                 param = self.get_param_value(1, "output", instruction)
                 self.ll("output " + str(param))
-                self.output.append(param)
+                output.append(param)
                 self.pc = self.pc + 2
+                return output
 
             elif op_code == 5 or op_code == 6: # jump if true/false
                 self.lv_params(2, self.memory, self.pc)
@@ -154,7 +168,7 @@ class IntComputer:
                 assert False, "unexpected opcode %d at mem[%d]"%(op_code, self.pc)
 
             #print(self.memory)
-        return self.output
+        return output
 
 def test_mem(memory, expected_memory, msg, logging=log_none):
     IntComputer(memory, logging).execute([])
@@ -241,5 +255,15 @@ def tests():
     output = IntComputer([1102,34915192,34915192,7,4,7,99,0]).execute()
     assert len(str(output[0])) == 16, "expected 16-digit number but got " + str(output)
     test_inout([104,1125899906842624,99], [], [1125899906842624], "output large number")
+
+    stepper = IntComputer([104,1,104,2,99])
+    step_out = stepper.step()
+    assert step_out == [1], "expected first output only, got " + str(step_out)
+    step_out = stepper.step()
+    assert step_out == [2], "expected second output only, got " + str(step_out)
+
+    test_inmem([3,10,104,1,3,11,104,2,99], [33,44], [3,10,104,1,3,11,104,2,99,0,33,44], "inputs split between steps")
+    test_inmem([3,11,104,1,3,12,104,2,3,13,99], [33,44,55], [3,11,104,1,3,12,104,2,3,13,99,33,44,55], "inputs split between steps 2")
+    
     print("tests pass")
     
