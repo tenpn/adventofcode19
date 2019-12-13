@@ -3,34 +3,6 @@
 def get_instr_mode(instruction, param_index):
     return int(instruction[-2-param_index]) if len(instruction) > (1+param_index) else 0
 
-# param index is 1-based
-def get_param_value(param_index, name, instruction, memory, pc, relative_base):
-    param_location = get_param_location(param_index, name, instruction, memory, pc, relative_base)
-    return read_memory(memory, param_location)
-    
-# param index is 1-based
-def get_param_location(param_index, name, instruction, memory, pc, relative_base):
-    param_mode = get_instr_mode(instruction, param_index)
-    if param_mode == 0:
-        param_location = memory[pc+param_index]
-        return param_location
-    elif param_mode == 1:
-        return pc+param_index
-    else:
-        assert param_mode == 2, "unknown param mode " + str(param_mode)
-        relative_position = relative_base + memory[pc+param_index]
-        return relative_position
-
-def read_memory(memory, loc):
-    assert loc >= 0, "expected non-negative memory location but got %d"%(loc)
-    return 0 if len(memory) <= loc else memory[loc]
-
-def ensure_memory(memory, new_location):
-    assert new_location >= 0, "Expected non-negative memory location but got %d"%(new_location)
-    if len(memory) <= new_location:
-        extra_pad = [0 for _ in range((new_location-len(memory))+1)]
-        memory += extra_pad
-
 log_none = "none"
 log_normal = "normal"
 log_verbose = "verbose"
@@ -50,109 +22,150 @@ def lv_params(param_count, memory, pc):
     for i in range(param_count):
         param_log += "%d "%(memory[pc+i+1])
     lv(param_log)
+
+class IntComputer:
+    def __init__(self, memory, log_level=log_none):
+        self.memory = memory
+        self.log_level = log_level
+        self.prefix = ""
+        self.output = []
+        self.pc = 0
+        self.relative_base = 0
+
+    def lv(self, msg):
+        if self.log_level == log_verbose:
+            print(self.prefix, msg)
+    def ll(self, msg):
+        if self.log_level != log_none:
+            print(self.prefix, msg)
+    def lv_params(self, param_count, memory, pc):
+        param_log = ""
+        for i in range(param_count):
+            param_log += "%d "%(memory[pc+i+1])
+        self.lv(param_log)
         
-def execute(memory, input=[], log_level=log_none):
-    global global_log_level, global_prefix
-    pc = 0
-    output = []
-    input_pc = 0
-    relative_base = 0
-    global_log_level = log_level
-    if global_log_level == log_verbose:
-        #import pdb; pdb.set_trace()
-        pass
-    
-    while memory[pc] != 99:
-        # string stuff! but it's fine!
-        instruction = str(memory[pc])
-        op_code = int(instruction[-2:])
-        global_prefix = str(pc) + " " + instruction + ":"
-        
-        if op_code <= 2: # *+
-            lv_params(3, memory, pc)
-            sym = "+" if op_code == 1 else "*"
+    # param index is 1-based
+    def get_param_value(self, param_index, name, instruction):
+        param_location = self.get_param_location(param_index, name, instruction)
+        return self.read_memory(param_location)
 
-            param1 = get_param_value(1, sym, instruction, memory, pc, relative_base)
-            param2 = get_param_value(2, sym, instruction, memory, pc, relative_base)
-
-            dest = get_param_location(3, sym, instruction, memory, pc, relative_base)
-            res = (param1+param2) if op_code == 1 else (param1*param2)
-            ll("memory[%d] = %d %s %d = %d"%(dest, param1, sym, param2, res))
-            ensure_memory(memory, dest)
-            memory[dest] = res
-            pc = pc + 4
-            
-        elif op_code == 3: # input
-            lv_params(1, memory, pc)
-            new_input = input[input_pc]
-            input_pc = input_pc + 1
-            dest = get_param_location(1, "input", instruction, memory, pc, relative_base)
-            ensure_memory(memory, dest)
-            ll("memory[%d] = input %d"%(dest, new_input))
-            memory[dest] = new_input
-            pc = pc + 2
-
-        elif op_code == 4: # output
-            lv_params(1, memory, pc)
-            param = get_param_value(1, "output", instruction, memory, pc, relative_base)
-            ll("output " + str(param))
-            output.append(param)
-            pc = pc + 2
-
-        elif op_code == 5 or op_code == 6: # jump if true/false
-            lv_params(2, memory, pc)
-            param = get_param_value(1, "jumpif", instruction, memory, pc, relative_base)
-            sym = "jumpIfTrue" if op_code == 5 else "jumpIfFalse"
-            if (param == 0 and op_code == 5) or (param != 0 and op_code == 6):
-                ll("%s %d fails"%(sym, param))
-                pc = pc + 3
-            else:
-                pc = get_param_value(2, "jumpif", instruction, memory, pc, relative_base)
-                ll("%s %d passed, jump to %d"%(sym, param, pc))
-
-        elif op_code == 7: # less than
-            lv_params(3, memory, pc)
-            param1 = get_param_value(1, "lt", instruction, memory, pc, relative_base)
-            param2 = get_param_value(2, "lt", instruction, memory, pc, relative_base)
-            dest = get_param_location(3, "lt", instruction, memory, pc, relative_base)
-            ensure_memory(memory, dest)
-            memory[dest] = 1 if param1 < param2 else 0
-            ll("memory[%d] = %d < %d = %d"%(dest, param1, param2, memory[dest]))
-            pc = pc + 4
-            
-        elif op_code == 8: # equal
-            lv_params(3, memory, pc)
-            param1 = get_param_value(1, "eq", instruction, memory, pc, relative_base)
-            param2 = get_param_value(2, "eq", instruction, memory, pc, relative_base)
-            dest = get_param_location(3, "eq", instruction, memory, pc, relative_base)
-            ensure_memory(memory, dest)
-            memory[dest] = 1 if param1 == param2 else 0
-            ll("memory[%d] = %d == %d = %d"%(dest, param1, param2, memory[dest]))
-            pc = pc + 4
-
-        elif op_code == 9: # move relative base
-            lv_params(1, memory, pc)
-            param1 = get_param_value(1, "relbase", instruction, memory, pc, relative_base)
-            relative_base += param1
-            ll("relative += %d = %d"%(param1, relative_base))
-            pc = pc + 2
-            
+    # param index is 1-based
+    def get_param_location(self, param_index, name, instruction):
+        param_mode = get_instr_mode(instruction, param_index)
+        if param_mode == 0:
+            param_location = self.memory[self.pc+param_index]
+            return param_location
+        elif param_mode == 1:
+            return self.pc+param_index
         else:
-            assert False, "unexpected opcode %d at mem[%d]"%(op_code, pc)
+            assert param_mode == 2, "unknown param mode " + str(param_mode)
+            relative_position = self.relative_base + self.memory[self.pc+param_index]
+            return relative_position
 
-        #print(memory)
-    return output
+    def read_memory(self, loc):
+        assert loc >= 0, "expected non-negative memory location but got %d"%(loc)
+        return 0 if len(self.memory) <= loc else self.memory[loc]
+
+    def ensure_memory(self, new_location):
+        assert new_location >= 0, "Expected non-negative memory location but got %d"%(new_location)
+        if len(self.memory) <= new_location:
+            extra_pad = [0 for _ in range((new_location-len(self.memory))+1)]
+            self.memory += extra_pad
+
+    def execute(self, input=[]):
+        input_pc = 0
+
+        while self.memory[self.pc] != 99:
+            # string stuff! but it's fine!
+            instruction = str(self.memory[self.pc])
+            op_code = int(instruction[-2:])
+            self.prefix = str(self.pc) + " " + instruction + ":"
+
+            if op_code <= 2: # *+
+                self.lv_params(3, self.memory, self.pc)
+                sym = "+" if op_code == 1 else "*"
+
+                param1 = self.get_param_value(1, sym, instruction)
+                param2 = self.get_param_value(2, sym, instruction)
+
+                dest = self.get_param_location(3, sym, instruction)
+                res = (param1+param2) if op_code == 1 else (param1*param2)
+                self.ll("memory[%d] = %d %s %d = %d"%(dest, param1, sym, param2, res))
+                self.ensure_memory(dest)
+                self.memory[dest] = res
+                self.pc = self.pc + 4
+
+            elif op_code == 3: # input
+                self.lv_params(1, self.memory, self.pc)
+                new_input = input[input_pc]
+                input_pc = input_pc + 1
+                dest = self.get_param_location(1, "input", instruction)
+                self.ensure_memory(dest)
+                self.ll("memory[%d] = input %d"%(dest, new_input))
+                self.memory[dest] = new_input
+                self.pc = self.pc + 2
+
+            elif op_code == 4: # output
+                self.lv_params(1, self.memory, self.pc)
+                param = self.get_param_value(1, "output", instruction)
+                self.ll("output " + str(param))
+                self.output.append(param)
+                self.pc = self.pc + 2
+
+            elif op_code == 5 or op_code == 6: # jump if true/false
+                self.lv_params(2, self.memory, self.pc)
+                param = self.get_param_value(1, "jumpif", instruction)
+                sym = "jumpIfTrue" if op_code == 5 else "jumpIfFalse"
+                if (param == 0 and op_code == 5) or (param != 0 and op_code == 6):
+                    self.ll("%s %d fails"%(sym, param))
+                    self.pc = self.pc + 3
+                else:
+                    self.pc = self.get_param_value(2, "jumpif", instruction)
+                    self.ll("%s %d passed, jump to %d"%(sym, param, self.pc))
+
+            elif op_code == 7: # less than
+                self.lv_params(3, self.memory, self.pc)
+                param1 = self.get_param_value(1, "lt", instruction)
+                param2 = self.get_param_value(2, "lt", instruction)
+                dest = self.get_param_location(3, "lt", instruction)
+                self.ensure_memory(dest)
+                self.memory[dest] = 1 if param1 < param2 else 0
+                self.ll("memory[%d] = %d < %d = %d"%(dest, param1, param2, self.memory[dest]))
+                self.pc = self.pc + 4
+
+            elif op_code == 8: # equal
+                self.lv_params(3, self.memory, self.pc)
+                param1 = self.get_param_value(1, "eq", instruction)
+                param2 = self.get_param_value(2, "eq", instruction)
+                dest = self.get_param_location(3, "eq", instruction)
+                self.ensure_memory(dest)
+                self.memory[dest] = 1 if param1 == param2 else 0
+                self.ll("memory[%d] = %d == %d = %d"%(dest, param1, param2, self.memory[dest]))
+                self.pc = self.pc + 4
+
+            elif op_code == 9: # move relative base
+                self.lv_params(1, self.memory, self.pc)
+                param1 = self.get_param_value(1, "relbase", instruction)
+                self.relative_base += param1
+                self.ll("relative += %d = %d"%(param1, self.relative_base))
+                self.pc = self.pc + 2
+
+            else:
+                assert False, "unexpected opcode %d at mem[%d]"%(op_code, self.pc)
+
+            #print(self.memory)
+        return self.output
 
 def test_mem(memory, expected_memory, msg, logging=log_none):
-    execute(memory, [], logging)
+    IntComputer(memory, logging).execute([])
     assert memory == expected_memory, "%s expected mem %s but got %s" %(msg, str(expected_memory), str(memory))
     
 def test_inmem(memory, input, expected_memory, msg, logging=log_none):
-    execute(memory, input, logging)
+    IntComputer(memory, logging).execute(input)
     assert memory == expected_memory, "%s expected mem %s but got %s"%(msg, str(expected_memory), str(memory))
 
 def test_inout(memory, input, expected_output, msg, logging=log_none):
-    actual_output = execute(memory, input, logging)
+    actual_output = IntComputer(memory, logging).execute(input)
     assert actual_output == expected_output, "%s expected %s got %s"%(msg, str(expected_output), str(actual_output))
 
 def tests():
@@ -225,7 +238,7 @@ def tests():
     test_inmem([109,10,203,0,99],[444],[109,10,203,0,99,0,0,0,0,0,444], "relative write dest in input")
     # day9 tests
     test_inout([109,1,204,-1,1001,100,1,100,1008,100,16,101,1006,101,0,99], [], [109,1,204,-1,1001,100,1,100,1008,100,16,101,1006,101,0,99], "copy to output")
-    output = execute([1102,34915192,34915192,7,4,7,99,0], [])
+    output = IntComputer([1102,34915192,34915192,7,4,7,99,0]).execute()
     assert len(str(output[0])) == 16, "expected 16-digit number but got " + str(output)
     test_inout([104,1125899906842624,99], [], [1125899906842624], "output large number")
     print("tests pass")
