@@ -78,15 +78,18 @@ class IntComputer:
 
     def execute(self, input=[]):
         all_out = []
-        while self.is_completed() == False:
-            all_out += self.step(input)
+        while True:
+            next_output = self.step(input)
+            if next_output == None:
+                break
+            all_out.append(next_output)
             # strip out consumed input
             input = input[self.input_pc:]
         return all_out
 
+    # returns None if completed, otherwise returns next output
     def step(self, input=[]):
         self.input_pc = 0
-        output = []
 
         while self.is_completed() == False:
             # string stuff! but it's fine!
@@ -122,9 +125,8 @@ class IntComputer:
                 self.lv_params(1, self.memory, self.pc)
                 param = self.get_param_value(1, "output", instruction)
                 self.ll("output " + str(param))
-                output.append(param)
                 self.pc = self.pc + 2
-                return output
+                return param
 
             elif op_code == 5 or op_code == 6: # jump if true/false
                 self.lv_params(2, self.memory, self.pc)
@@ -168,7 +170,7 @@ class IntComputer:
                 assert False, "unexpected opcode %d at mem[%d]"%(op_code, self.pc)
 
             #print(self.memory)
-        return output
+        return None
 
 def test_mem(memory, expected_memory, msg, logging=log_none):
     IntComputer(memory, logging).execute([])
@@ -258,9 +260,9 @@ def tests():
 
     stepper = IntComputer([104,1,104,2,99])
     step_out = stepper.step()
-    assert step_out == [1], "expected first output only, got " + str(step_out)
+    assert step_out == 1, "expected first output only, got " + str(step_out)
     step_out = stepper.step()
-    assert step_out == [2], "expected second output only, got " + str(step_out)
+    assert step_out == 2, "expected second output only, got " + str(step_out)
 
     test_inmem([3,10,104,1,3,11,104,2,99], [33,44], [3,10,104,1,3,11,104,2,99,0,33,44], "inputs split between steps")
     test_inmem([3,11,104,1,3,12,104,2,3,13,99], [33,44,55], [3,11,104,1,3,12,104,2,3,13,99,33,44,55], "inputs split between steps 2")
