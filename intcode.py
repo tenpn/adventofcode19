@@ -90,6 +90,8 @@ class IntComputer:
     # returns None if completed, otherwise returns next output
     def step(self, input=[]):
         self.input_pc = 0
+        if isinstance(input, int):
+            input = [input]
 
         while self.is_completed() == False:
             # string stuff! but it's fine!
